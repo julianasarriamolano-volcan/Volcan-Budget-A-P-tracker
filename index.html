@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volcán MKT — A&P Budget 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Georgia&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --black:   #1a1a1a;
+    --gray90:  #2C2C2A;
+    --gray70:  #444441;
+    --gray50:  #888780;
+    --gray30:  #B4B2A9;
+    --gray10:  #F1EFE8;
+    --white:   #FAFAF8;
+    --blue-dk: #0C447C;
+    --blue-md: #185FA5;
+    --blue-lt: #85B7EB;
+    --blue-bg: #E6F1FB;
+    --exec:    #1a1a1a;
+    --comm:    #85B7EB;
+    --free:    #D3D1C7;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    background: var(--white);
+    color: var(--black);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--gray30);
+    padding: 28px 40px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brand { display: flex; flex-direction: column; gap: 4px; }
+  .brand-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--black);
+  }
+  .brand-sub { font-size: 11px; color: var(--gray50); letter-spacing: 0.05em; }
+  .header-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    display: inline-block; border-radius: 3px; padding: 3px 10px;
+    font-size: 11px; font-family: Georgia, serif;
+  }
+  .pill-mxn { background: var(--blue-bg); color: var(--blue-dk); }
+  .pill-usd { background: var(--gray10); color: var(--gray70); }
+  .pill-tc  { background: var(--gray90); color: var(--white); }
+  .last-updated { font-size: 11px; color: var(--gray50); }
+
+  /* MAIN LAYOUT */
+  main { padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+
+  /* LOADING STATE */
+  #loading {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 300px; flex-direction: column; gap: 16px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--gray30);
+    border-top-color: var(--black);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { font-size: 12px; color: var(--gray50); }
+
+  /* ERROR STATE */
+  #error-state {
+    display: none; padding: 32px;
+    border: 0.5px solid var(--gray30); border-radius: 6px;
+    text-align: center; color: var(--gray50);
+  }
+  #error-state strong { display: block; color: var(--black); margin-bottom: 8px; font-size: 14px; }
+  #error-state code { font-size: 11px; background: var(--gray10); padding: 2px 6px; border-radius: 3px; }
+
+  /* CONTENT (hidden until loaded) */
+  #content { display: none; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gray50); margin: 0 0 14px;
+  }
+  .section-wrap { margin-bottom: 36px; }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 10px;
+  }
+  .kpi {
+    border: 0.5px solid var(--gray30); border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .kpi-label { font-size: 11px; color: var(--gray50); margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 500; color: var(--black); line-height: 1.1; }
+  .kpi-sub   { font-size: 11px; color: var(--gray50); margin-top: 4px; }
+  .kpi-usd   { font-size: 11px; color: var(--blue-dk); background: var(--blue-bg); display: inline-block; padding: 1px 8px; border-radius: 3px; margin-top: 5px; }
+
+  /* CHARTS */
+  .charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+  .chart-card {
+    border: 0.5px solid var(--gray30); border-radius: 6px; padding: 16px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .li { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray50); }
+  .ld { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* STATUS CARDS GRID */
+  .sc-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .sc { border: 0.5px solid var(--gray30); border-radius: 6px; padding: 12px 14px; }
+  .sc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .sc-id { font-size: 10px; color: var(--gray50); }
+  .sc-name { font-size: 12px; font-weight: 500; margin-top: 2px; }
+  .prog { background: var(--gray30); border-radius: 3px; height: 5px; overflow: hidden; display: flex; margin: 6px 0; }
+  .sc-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray50); }
+  .sc-free-val { font-weight: 500; color: var(--blue-dk); }
+  .sc-free-zero { font-weight: 500; color: var(--gray50); }
+
+  /* TABLE */
+  .table-wrap { border: 0.5px solid var(--gray30); border-radius: 6px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Georgia, serif; }
+  thead th {
+    background: var(--gray10); padding: 9px 12px;
+    text-align: left; font-size: 11px; font-weight: 500;
+    color: var(--gray50); border-bottom: 0.5px solid var(--gray30);
+    white-space: nowrap;
+  }
+  tbody td { padding: 8px 12px; border-bottom: 0.5px solid #E0DED7; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tfoot td { background: var(--gray10); padding: 9px 12px; font-weight: 500; border-top: 0.5px solid var(--gray30); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .comm-val { color: var(--blue-md); }
+  .free-val  { color: var(--blue-dk); font-weight: 500; }
+  .zero-val  { color: var(--gray50); }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 3px; white-space: nowrap; font-family: Georgia, serif; }
+  .b-full { background: var(--gray90); color: var(--white); }
+  .b-part { background: var(--blue-bg); color: var(--blue-dk); }
+  .b-free { background: var(--gray10); color: var(--gray70); border: 0.5px solid var(--gray30); }
+
+  /* INLINE PROG IN TABLE */
+  .tbl-prog { background: var(--gray30); border-radius: 3px; height: 4px; overflow: hidden; display: flex; margin-top: 3px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 0.5px solid var(--gray30); padding: 20px 40px;
+    font-size: 11px; color: var(--gray50); line-height: 1.7;
+  }
+  footer strong { color: var(--gray70); }
+
+  /* BANNER */
+  .config-banner {
+    border: 0.5px solid var(--gray30); border-radius: 6px;
+    padding: 14px 20px; margin-bottom: 32px;
+    background: var(--gray10);
+    font-size: 12px; color: var(--gray70);
+    display: none;
+  }
+  .config-banner strong { color: var(--black); }
+  .config-banner code {
+    background: white; padding: 2px 8px; border-radius: 3px;
+    font-size: 11px; word-break: break-all; display: inline-block;
+    border: 0.5px solid var(--gray30);
+  }
+
+  @media (max-width: 900px) {
+    header, main, footer { padding-left: 20px; padding-right: 20px; }
+    .kpi-grid  { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .sc-grid   { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .sc-grid  { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-name">Volcán MKT — A&amp;P 2026</span>
+    <span class="brand-sub">Budget tracker · Millones de pesos mexicanos</span>
+  </div>
+  <div class="header-meta">
+    <span class="pill pill-mxn">MXN</span>
+    <span class="pill pill-usd">Gastos parciales en USD</span>
+    <span class="pill pill-tc">T/C $18.50 MXN/USD</span>
+    <span class="last-updated" id="last-updated"></span>
+  </div>
+</header>
+
+<main>
+
+  <!-- CONFIGURACIÓN: pega aquí tu URL de Google Sheets -->
+  <div class="config-banner" id="cfg-banner">
+    <strong>Configuración pendiente</strong> — Reemplaza la URL de Google Sheets en el archivo HTML.<br>
+    Busca la línea <code>SHEET_CSV_URL</code> y pega tu link de publicación de Google Sheets en CSV.
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Cargando datos desde Google Sheets...</p>
+  </div>
+
+  <div id="error-state">
+    <strong>No se pudo conectar con Google Sheets</strong>
+    Verifica que la URL esté configurada correctamente y que la hoja esté publicada.<br><br>
+    <code id="error-url"></code>
+  </div>
+
+  <div id="content">
+
+    <!-- KPIs -->
+    <div class="section-wrap">
+      <p class="section-label">Resumen presupuestal</p>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <p class="kpi-label">Budget total 2026</p>
+          <p class="kpi-value" id="kv-total">—</p>
+          <p class="kpi-sub">millones MXN</p>
+          <span class="kpi-usd" id="ku-total">—</span>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label">Ejecutado (Ene–Abr)</p>
+          <p class="kpi-value" id="kv-exec">—</p>
+          <p class="kpi-sub" id="ks-exec">—</p>
+          <span class="kpi-usd" id="ku-exec">—</span>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label">Comprometido May–Dic</p>
+          <p class="kpi-value" id="kv-comm">—</p>
+          <p class="kpi-sub" id="ks-comm">—</p>
+          <span class="kpi-usd" id="ku-comm">—</span>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label">No asignado a ninguna actividad</p>
+          <p class="kpi-value" id="kv-free">—</p>
+          <p class="kpi-sub" id="ks-free">—</p>
+          <span class="kpi-usd" id="ku-free">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="section-wrap">
+      <p class="section-label">Distribución mensual y por categoría</p>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="legend">
+            <span class="li"><span class="ld" style="background:var(--exec)"></span>Ejecutado (Ene–Abr)</span>
+            <span class="li"><span class="ld" style="background:var(--comm)"></span>Comprometido (May–Dic)</span>
+          </div>
+          <div style="position:relative;width:100%;height:230px;">
+            <canvas id="ch-monthly" role="img" aria-label="Gasto mensual ejecutado y comprometido 2026">Gasto mensual por estado.</canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="legend">
+            <span class="li"><span class="ld" style="background:var(--exec)"></span>Ejecutado</span>
+            <span class="li"><span class="ld" style="background:var(--comm)"></span>Comprometido</span>
+            <span class="li"><span class="ld" style="background:var(--free)"></span>No asignado</span>
+          </div>
+          <div style="position:relative;width:100%;height:230px;">
+            <canvas id="ch-cats" role="img" aria-label="Distribución ejecutado comprometido y no asignado por categoría">Distribución por categoría.</canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS CARDS -->
+    <div class="section-wrap">
+      <p class="section-label">Estado por categoría</p>
+      <div class="sc-grid" id="sc-grid"></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="section-wrap">
+      <p class="section-label">Detalle por categoría</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">Categoría</th>
+              <th class="num" style="width:13%">Budget</th>
+              <th class="num" style="width:13%">Ejecutado</th>
+              <th class="num" style="width:14%">Comprometido</th>
+              <th class="num" style="width:11%">No asignado</th>
+              <th style="width:14%">Distribución</th>
+              <th style="width:13%">Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+          <tfoot><tr id="tbl-foot"></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<footer>
+  <strong>Ejecutado:</strong> gastos realizados enero–abril 2026. &nbsp;
+  <strong>Comprometido:</strong> cargos negociados o planeados mayo–diciembre (registrados en el tracker). &nbsp;
+  <strong>No asignado a ninguna actividad:</strong> sin asignación, disponible para reasignación o ahorro según dirección financiera. &nbsp;
+  * Equivalencias USD al tipo de cambio de $18.50 MXN/USD, de carácter referencial.
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+//  CONFIGURACIÓN — PEGA TU URL DE GOOGLE SHEETS
+// ─────────────────────────────────────────────
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1iCGuMWkJ0SCwL6lQfhiYBqxrBc6MIMHiKyIFpU3BAzE/export?format=csv&gid=848292178";
+// Ejemplo:
+// const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1ABC.../pub?gid=0&single=true&output=csv';
+
+const TC = 18.5;
+const EXEC_MONTHS = 4; // meses ejecutados (Ene–Abr)
+
+// ─────────────────────────────────────────────
+//  FORMATO
+// ─────────────────────────────────────────────
+const fmtM  = v => '$' + (v / 1000000).toFixed(2) + 'M';
+const fmtMU = v => '≈ USD $' + (v / TC / 1000000).toFixed(2) + 'M';
+const pct   = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+
+// ─────────────────────────────────────────────
+//  PARSEO CSV
+// ─────────────────────────────────────────────
+function parseCSV(text) {
+  return text.trim().split('\n').map(row => {
+    const cells = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    cells.push(cur.trim());
+    return cells;
+  });
+}
+
+function toNum(v) {
+  if (v === undefined || v === null) return 0;
+  const n = parseFloat(String(v).replace(/[,$\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+// ─────────────────────────────────────────────
+//  EXTRAE CATEGORÍAS DESDE FILAS CSV
+//  Estructura esperada de la hoja BUDGET MKT 2026:
+//  col0=ID, col1=Nombre, col2=PO#, col3=vacío,
+//  col4=JAN … col15=DEC, col16=TOTAL, col18=BUDGET
+// ─────────────────────────────────────────────
+function extractCategories(rows) {
+  const catIds = ['A1','A2','A3','A4','A5','A6','A7','A8'];
+  const cats = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const id  = (row[0] || '').trim();
+    if (!catIds.includes(id)) continue;
+
+    const name   = (row[1] || '').trim();
+    const budget = toNum(row[18]) || toNum(row[16]);
+    const monthly = [];
+    for (let m = 0; m < 12; m++) {
+      monthly.push(toNum(row[4 + m]));
+    }
+    const hasusd = ['A1','A2','A4'].includes(id);
+    cats.push({ id, name, budget, monthly, hasusd });
+  }
+
+  cats.forEach(c => {
+    c.executed  = c.monthly.slice(0, EXEC_MONTHS).reduce((a, b) => a + b, 0);
+    c.committed = c.monthly.slice(EXEC_MONTHS).reduce((a, b) => a + b, 0);
+    c.free      = Math.max(0, c.budget - c.executed - c.committed);
+  });
+
+  return cats;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+let chartMonthly = null;
+let chartCats    = null;
+
+function render(cats) {
+  const totalBudget = cats.reduce((a, c) => a + c.budget, 0);
+  const totalExec   = cats.reduce((a, c) => a + c.executed, 0);
+  const totalComm   = cats.reduce((a, c) => a + c.committed, 0);
+  const totalFree   = cats.reduce((a, c) => a + c.free, 0);
+
+  // KPIs
+  document.getElementById('kv-total').textContent = fmtM(totalBudget);
+  document.getElementById('ku-total').textContent = fmtMU(totalBudget);
+  document.getElementById('kv-exec').textContent  = fmtM(totalExec);
+  document.getElementById('ks-exec').textContent  = pct(totalExec, totalBudget) + '% del budget';
+  document.getElementById('ku-exec').textContent  = fmtMU(totalExec);
+  document.getElementById('kv-comm').textContent  = fmtM(totalComm);
+  document.getElementById('ks-comm').textContent  = pct(totalComm, totalBudget) + '% del budget';
+  document.getElementById('ku-comm').textContent  = fmtMU(totalComm);
+  document.getElementById('kv-free').textContent  = fmtM(totalFree);
+  document.getElementById('ks-free').textContent  = pct(totalFree, totalBudget) + '% del budget';
+  document.getElementById('ku-free').textContent  = fmtMU(totalFree);
+
+  // Timestamp
+  document.getElementById('last-updated').textContent =
+    'Actualizado ' + new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  // Status cards
+  const scGrid = document.getElementById('sc-grid');
+  scGrid.innerHTML = '';
+  cats.forEach(c => {
+    const pE = pct(c.executed, c.budget);
+    const pC = pct(c.committed, c.budget);
+    let badge, bclass;
+    if (c.free < c.budget * 0.02) { badge = 'Sin asignar';    bclass = 'b-full'; }
+    else if (c.free > c.budget * 0.5) { badge = 'Mayoría sin asignar';  bclass = 'b-free'; }
+    else                              { badge = 'Parcialmente sin asignar';   bclass = 'b-part'; }
+    scGrid.innerHTML += `<div class="sc">
+      <div class="sc-head">
+        <div><p class="sc-id">${c.id}</p><p class="sc-name">${c.name}</p></div>
+        <span class="badge ${bclass}">${badge}</span>
+      </div>
+      <div class="prog">
+        <div style="height:100%;width:${Math.min(pE,100)}%;background:var(--exec)"></div>
+        <div style="height:100%;width:${Math.min(pC,100-pE)}%;background:var(--comm)"></div>
+      </div>
+      <div class="sc-foot">
+        <span>Budget: ${fmtM(c.budget)}</span>
+        <span>No asignado: <span class="${c.free > c.budget*0.02 ? 'sc-free-val':'sc-free-zero'}">${fmtM(c.free)}</span></span>
+      </div>
+    </div>`;
+  });
+
+  // Table
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = '';
+  cats.forEach(c => {
+    const pE = pct(c.executed, c.budget);
+    const pC = pct(c.committed, c.budget);
+    let badge, bclass;
+    if (c.free < c.budget * 0.02) { badge = 'Sin asignar';   bclass = 'b-full'; }
+    else if (c.free > c.budget * 0.5) { badge = 'Mayoría sin asignar'; bclass = 'b-free'; }
+    else                              { badge = 'Parcialmente sin asignar';  bclass = 'b-part'; }
+    const uTag = c.hasusd ? ' <span style="font-size:10px;color:#888780">(parte USD)</span>' : '';
+    const freeClass = c.free > c.budget * 0.02 ? 'free-val' : 'zero-val';
+    tbody.innerHTML += `<tr>
+      <td style="font-size:11px"><span style="color:#888780;font-size:10px">${c.id}</span> ${c.name}${uTag}</td>
+      <td class="num">${fmtM(c.budget)}</td>
+      <td class="num">${fmtM(c.executed)}</td>
+      <td class="num comm-val">${fmtM(c.committed)}</td>
+      <td class="num ${freeClass}">${fmtM(c.free)}</td>
+      <td>
+        <div class="tbl-prog">
+          <div style="height:100%;width:${Math.min(pE,100)}%;background:var(--exec)"></div>
+          <div style="height:100%;width:${Math.min(pC,100-pE)}%;background:var(--comm)"></div>
+        </div>
+        <div style="font-size:10px;color:#888780;margin-top:2px">${pE}% ej. · ${pC}% comp.</div>
+      </td>
+      <td><span class="badge ${bclass}">${badge}</span></td>
+    </tr>`;
+  });
+
+  const tfoot = document.getElementById('tbl-foot');
+  tfoot.innerHTML = `<td>Total</td><td class="num">${fmtM(totalBudget)}</td><td class="num">${fmtM(totalExec)}</td><td class="num comm-val">${fmtM(totalComm)}</td><td class="num free-val">${fmtM(totalFree)}</td><td></td><td></td>`;
+
+  // Charts
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mExec  = months.map((_, i) => i < EXEC_MONTHS ? cats.reduce((a, c) => a + (c.monthly[i] || 0), 0) : null);
+  const mComm  = months.map((_, i) => i >= EXEC_MONTHS ? cats.reduce((a, c) => a + (c.monthly[i] || 0), 0) : null);
+
+  if (chartMonthly) chartMonthly.destroy();
+  chartMonthly = new Chart(document.getElementById('ch-monthly'), {
+    type: 'bar',
+    data: { labels: months, datasets: [
+      { label:'Ejecutado',    data: mExec, backgroundColor:'#1a1a1a', borderRadius:2, borderSkipped:false },
+      { label:'Comprometido', data: mComm, backgroundColor:'rgba(133,183,235,0.85)', borderRadius:2, borderSkipped:false }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => ctx.raw != null ? ' $' + (ctx.raw/1000000).toFixed(2) + 'M MXN' : '' }}},
+      scales: {
+        x: { ticks: { font:{size:11,family:'Georgia'}, color:'#888780', autoSkip:false, maxRotation:0 }, grid: { display:false }},
+        y: { ticks: { callback: v => '$'+(v/1000000).toFixed(1)+'M', font:{size:11,family:'Georgia'}, color:'#888780' }, grid: { color:'rgba(180,178,169,0.3)' }}
+      }
+    }
+  });
+
+  if (chartCats) chartCats.destroy();
+  chartCats = new Chart(document.getElementById('ch-cats'), {
+    type: 'bar',
+    data: { labels: cats.map(c => c.id), datasets: [
+      { label:'Ejecutado',    data: cats.map(c => c.executed),  backgroundColor:'#1a1a1a', borderSkipped:false },
+      { label:'Comprometido', data: cats.map(c => c.committed), backgroundColor:'rgba(133,183,235,0.85)', borderSkipped:false },
+      { label:'No asignado',        data: cats.map(c => c.free),       backgroundColor:'#D3D1C7', borderSkipped:false }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': $' + (ctx.raw/1000000).toFixed(2) + 'M' }}},
+      scales: {
+        x: { stacked:true, ticks: { font:{size:11,family:'Georgia'}, color:'#888780' }, grid: { display:false }},
+        y: { stacked:true, ticks: { callback: v => '$'+(v/1000000).toFixed(1)+'M', font:{size:11,family:'Georgia'}, color:'#888780' }, grid: { color:'rgba(180,178,169,0.3)' }}
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+//  CARGA DATOS
+// ─────────────────────────────────────────────
+async function loadData() {
+  const url = SHEET_CSV_URL.trim();
+
+  if (!url || url === 'PEGA_TU_URL_AQUI') {
+    document.getElementById('loading').style.display    = 'none';
+    document.getElementById('cfg-banner').style.display = 'block';
+    document.getElementById('content').style.display    = 'block';
+    // Renderiza con datos de respaldo (hardcoded del tracker original)
+    renderFallback();
+    return;
+  }
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const cats = extractCategories(rows);
+    if (cats.length === 0) throw new Error('No se encontraron categorías A1–A8');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    render(cats);
+  } catch (err) {
+    document.getElementById('loading').style.display     = 'none';
+    document.getElementById('error-state').style.display = 'block';
+    document.getElementById('error-url').textContent     = url;
+    console.error('Error cargando Google Sheets:', err);
+  }
+}
+
+// Datos de respaldo (del tracker original) — se usan hasta que configures la URL
+function renderFallback() {
+  const cats = [
+    { id:'A1', name:'Media amplification',    budget:1745800,  hasusd:true,  monthly:[0,670800,0,0,275200,0,0,0,0,0,0,0] },
+    { id:'A2', name:'Influence (KOLs)',        budget:5349200,  hasusd:true,  monthly:[791307.5,145555,838177.5,138675,610600,1217201,168280.5,0,0,0,699502.5,0] },
+    { id:'A3', name:'Influence free bottles',  budget:2150000,  hasusd:false, monthly:[0,0,0,0,0,0,0,0,0,0,0,0] },
+    { id:'A4', name:'Partnerships',            budget:1612500,  hasusd:true,  monthly:[0,64736.5,0,825772,0,0,0,0,0,0,0,0] },
+    { id:'A5', name:'Product launch',          budget:1612500,  hasusd:false, monthly:[0,0,0,0,0,0,0,0,0,0,0,0] },
+    { id:'A6', name:'Content (agencies)',      budget:9675000,  hasusd:false, monthly:[862750,647750,675700,1440450,552698.5,552698.5,1012198.5,582198.5,582198.5,582198.5,582198.5,582198.5] },
+    { id:'A7', name:'Conversion',              budget:1075000,  hasusd:false, monthly:[0,44990,0,138121.76,0,0,0,0,0,0,0,0] },
+    { id:'A8', name:'Data & awards',           budget:860000,   hasusd:false, monthly:[0,0,217812.2,161680,0,0,0,70950,0,0,0,0] }
+  ];
+  cats.forEach(c => {
+    c.executed  = c.monthly.slice(0, EXEC_MONTHS).reduce((a,b)=>a+b,0);
+    c.committed = c.monthly.slice(EXEC_MONTHS).reduce((a,b)=>a+b,0);
+    c.free      = Math.max(0, c.budget - c.executed - c.committed);
+  });
+  render(cats);
+}
+
+loadData();
+</script>
+</body>
+</html>
